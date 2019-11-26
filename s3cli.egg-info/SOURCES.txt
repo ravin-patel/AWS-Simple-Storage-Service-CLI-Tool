@@ -1,0 +1,12 @@
+README.md
+setup.py
+s3cli/__init__.py
+s3cli/__main__.py
+s3cli/classmodule.py
+s3cli/funcmodule.py
+s3cli.egg-info/PKG-INFO
+s3cli.egg-info/SOURCES.txt
+s3cli.egg-info/dependency_links.txt
+s3cli.egg-info/entry_points.txt
+s3cli.egg-info/requires.txt
+s3cli.egg-info/top_level.txt

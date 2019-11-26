@@ -1,0 +1,3 @@
+[console_scripts]
+s3cli = pycli.__main__:main
+
