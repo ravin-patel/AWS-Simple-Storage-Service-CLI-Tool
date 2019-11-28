@@ -7,37 +7,57 @@ import Bucket
 import csv
 from argparse import RawTextHelpFormatter
 import constants
-
+import os.path
 
 def main():
    # try to open and retrieve access and secret keys from csv file
     try:
         f = open('accessKeys.csv', 'r')
+        reader = csv.reader(f, delimiter=',')
+        for col in reader:
+            accessKey = col[0]
+            secretKey = col[1]
+        # connect to s3 client and resourse using the keys retrieved
+        s3Client = boto3.client('s3',
+                    aws_access_key_id=accessKey,
+                    aws_secret_access_key=secretKey
+                    )
+        s3Resource = boto3.resource('s3',
+                    aws_access_key_id=accessKey,
+                    aws_secret_access_key=secretKey
+                    )
+        s3Cost = boto3.client('ce',
+                    aws_access_key_id=accessKey,
+                    aws_secret_access_key=secretKey
+                    )
+        response = s3Client.list_buckets()
     except FileNotFoundError:
-        sys.exit(
-            'Error: File does not exist. Please upload accessKeys.csv file into the root folder of s3cli')
-
-    reader = csv.reader(f, delimiter=',')
-    for col in reader:
-        accessKey = col[0]
-        secretKey = col[1]
-
-    # connect to s3 client and resourse using the keys retrieved
-    s3Client = boto3.client('s3',
-                            aws_access_key_id=accessKey,
-                            aws_secret_access_key=secretKey
-                            )
-    s3Resource = boto3.resource('s3',
-                                aws_access_key_id=accessKey,
-                                aws_secret_access_key=secretKey
-                                )
-    s3Cost = boto3.client('ce',
-                          aws_access_key_id=accessKey,
-                          aws_secret_access_key=secretKey
-                          )
-    # response of s3client to get list of buckets and its metadata
-    response = s3Client.list_buckets()
-
+        print('Error: accessKeys.csv does not exist. Please follow along below or upload accessKeys.csv file into the root folder of s3cli')
+        
+        check = input("Does your machine have aws cli installed and configured? Enter (y/n): ")
+        if(check == 'n'):
+            accessKey = input("Please enter your access key: ")
+            secretKey = input("Please enter your secret key: ")
+            s3Client = boto3.client('s3',
+                    aws_access_key_id=accessKey,
+                    aws_secret_access_key=secretKey
+                    )
+            s3Resource = boto3.resource('s3',
+                    aws_access_key_id=accessKey,
+                    aws_secret_access_key=secretKey
+                    )
+            s3Cost = boto3.client('ce',
+                    aws_access_key_id=accessKey,
+                    aws_secret_access_key=secretKey
+                    )
+            response = s3Client.list_buckets()
+        else:
+            print('Connecting to s3 using using the keys from your ~/.aws/credentials')
+            s3Client = boto3.client('s3')
+            s3Resource = boto3.resource('s3')
+            s3Cost = boto3.client('ce')
+            response = s3Client.list_buckets()
+       
     # argument parser
     parser = argparse.ArgumentParser(
         description=constants.HELP_TEXT, formatter_class=RawTextHelpFormatter)
@@ -81,8 +101,7 @@ def GetParams(arg):
 
 def PrintResult(result, arg):
     for region in result.keys():
-        print("===============================================================" +
-              region.upper()+"===============================================================")
+        print("Listing all buckets in: {}".format(region))
         for bucket in result[region]:
             print(bucket.name)
             if 'size' in arg.cmd and arg.kb == False and arg.mb == False and arg.gb == False:
@@ -103,6 +122,7 @@ def PrintResult(result, arg):
             if 'storage' in arg.cmd:
                 for k, v in bucket.storage.items():
                     print('|__ File: {}: {}'.format(k, v))
+                
 
         # print(b.cost)
 

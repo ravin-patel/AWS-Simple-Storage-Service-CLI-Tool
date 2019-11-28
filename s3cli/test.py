@@ -1,37 +1,73 @@
+import os
+import tempfile
 import unittest
-import boto
-from boto.s3.key import Key
-from moto import mock_s3
 import boto3
+import botocore
+from moto import mock_s3
+from BucketWorker import ProcessBucket
+from Bucket import Bucket
 
-
+BUCKET = "bucket"
+PREFIX = "mock_folder"
+@mock_s3
 class TestS3(unittest.TestCase):
-    mock_s3 = mock_s3()
-
     def setUp(self):
-        self.mock_s3.start()
-        self.location = "eu-west-1"
-        self.bucket_name = 'fakebucket1-ravin'
-        self.key_name = 'mock/fake_fake/test.json'
-        self.key_contents = 'This is test data.'
-        s3 = boto.connect_s3()
-        bucket = s3.create_bucket(self.bucket_name, location=self.location)
-        k = Key(bucket)
-        k.key = self.key_name
-        k.set_contents_from_string(self.key_contents)
-
+        response = {'Buckets': [{'Name': 'fakeBucket12345', 'CreationDate': datetime.datetime(2019, 11, 15, 0, 38, 11, tzinfo=tzutc())}]}
+        param = {
+            'objectParams': {
+                'size': False,
+                'fileCount': False,
+                'storage': False,
+                'lastModified': False
+            },
+            'creationDate': True,
+            'cost': True,
+            'size_kb': False,
+            'size_mb': False,
+            'size_gb': False,
+            'f': False
+        }
+        client = boto3.client(
+            "s3",
+            region_name="eu-east-1",
+            aws_access_key_id="fake_access_key",
+            aws_secret_access_key="fake_secret_key",
+            )
+    
+        try:
+            
+            s3 = boto3.resource(
+                "s3",
+                region_name="eu-east-1",
+                aws_access_key_id="fake_access_key",
+                aws_secret_access_key="fake_secret_key",
+                )
+            res = ProcessBucket(response, client, s3, params)
+            print(res)
+        except botocore.exceptions.ClientError:
+            pass
+        else:
+            err = "{bucket} should not exist.".format(bucket=BUCKET)
+            raise EnvironmentError(err)
+        try:
+           res = ProcessBucket(response, client, s3, params)
+           print(res)
+        except botocore.exceptions.ClientError:
+            pass
+        else:
+            err = 'Cant process bucket'
+            raise EnvironmentError(err)
     def tearDown(self):
-        self.mock_s3.stop()
+        s3 = boto3.resource(
+            "s3",
+            region_name="eu-west-1",
+            aws_access_key_id="fake_access_key",
+            aws_secret_access_key="fake_secret_key",
+            )
+        bucket = s3.Bucket(BUCKET)
+        for key in bucket.objects.all():
+            key.delete()
+        bucket.delete()
 
-    def test_s3_boto3(self):
-        s3 = boto3.resource('s3', region_name=self.location)
-        bucket = s3.Bucket(self.bucket_name)
-        assert bucket.name == self.bucket_name
-        # retrieve already setup keys
-        keys = list(bucket.objects.filter(Prefix=self.key_name))
-        assert len(keys) == 1
-        assert keys[0].key == self.key_name
-        # update key
-        s3.Object(self.bucket_name, self.key_name).put(Body='new')
-        key = s3.Object(self.bucket_name, self.key_name).get()
-        assert 'new' == key['Body'].read()
+if __name__ == "__main__":
+    unittest.main()
