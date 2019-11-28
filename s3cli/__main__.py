@@ -57,7 +57,7 @@ def main():
             s3Resource = boto3.resource('s3')
             s3Cost = boto3.client('ce')
             response = s3Client.list_buckets()
-       
+
     # argument parser
     parser = argparse.ArgumentParser(
         description=constants.HELP_TEXT, formatter_class=RawTextHelpFormatter)
@@ -76,6 +76,7 @@ def main():
     param = GetParams(arg)
     result = BucketWorker.ProcessBucket(response, s3Client, s3Resource, param)
     PrintResult(result, arg)
+    BucketWorker.getCost(s3Cost)
 
 # checks which cmd are called in the argument and sets it accordingly if it exists
 
@@ -122,6 +123,8 @@ def PrintResult(result, arg):
             if 'storage' in arg.cmd:
                 for k, v in bucket.storage.items():
                     print('|__ File: {}: {}'.format(k, v))
+            if 'cost' in arg.cmd:
+                break
                 
 
         # print(b.cost)

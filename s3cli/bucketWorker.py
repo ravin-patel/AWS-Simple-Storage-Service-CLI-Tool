@@ -2,6 +2,7 @@ import boto3
 import sys
 import botocore
 from Bucket import Bucket
+import datetime
 from datetime import datetime, timedelta
 
 
@@ -64,80 +65,21 @@ def ProcessBucketObjects(bucketObj, bucket, params, s3Client, s3Resource):
             bucketObj.lastModifiedFile = lastModifiedObj
 
 
-def getCost():
+def getCost(client):
+
 
     # use the bota3 lib to get the cost/usage
-    # res = client.get_cost_and_usage(TimePeriod={
-    #     'Start': '2019-11-01',
-    #     'End': '2019-11-27'
-    # })
-    test_res = {
-        "GroupDefinitions": [
-            {
-                "Key": "SERVICE",
-                "Type": "DIMENSION"
-            },
-            {
-                "Key": "Environment",
-                "Type": "TAG"
-            }
-        ],
-        "ResultsByTime": [
-            {
-                "Estimated": False,
-                "Groups": [
-                    {
-                        "Keys": [
-                            "AWS BUCKET 1",
-                            "Environment$Prod"
-                        ],
-                        "Metrics": {
-                            "BlendedCost": {
-                                "Amount": "39.1603300457",
-                                "Unit": "USD"
-                            },
-                            "UnblendedCost": {
-                                "Amount": "39.1603300457",
-                                "Unit": "USD"
-                            },
-                            "UsageQuantity": {
-                                "Amount": "173842.5440074444",
-                                "Unit": "N/A"
-                            }
-                        }
-                    },
-                    {
-                        "Keys": [
-                            "AWS BUCKET 2",
-                            "Environment$Test"
-                        ],
-                        "Metrics": {
-                            "BlendedCost": {
-                                "Amount": "0.1337464807",
-                                "Unit": "USD"
-                            },
-                            "UnblendedCost": {
-                                "Amount": "0.1337464807",
-                                "Unit": "USD"
-                            },
-                            "UsageQuantity": {
-                                "Amount": "15992.0786663399",
-                                "Unit": "N/A"
-                            }
-                        }
-                    }
-                ],
-                "TimePeriod": {
-                    "End": "2017-10-01",
-                    "Start": "2017-09-01"
-                },
-                "Total": {}
-            }
-        ]
-    }
-
+    start = datetime.now() - timedelta(days=15)
+    end = datetime.now() + timedelta(days=2)
+    res = client.get_cost_and_usage(TimePeriod={
+         'Start': start.strftime('%Y-%m-%d'),
+         'End': end.strftime('%Y-%m-%d')
+        },Granularity = 'MONTHLY', 
+        Metrics = ["BlendedCost", "UnblendedCost", "UsageQuantity"])
+    
+    print(res)
     buckets = dict()
-    for x in test_res["ResultsByTime"][0]["Groups"]:
+    for x in res["ResultsByTime"][0]["Groups"]:
         metrics = x["Metrics"]
         buckets[x["Keys"][0]] = float(metrics["BlendedCost"]["Amount"]) + float(
             metrics["UnblendedCost"]["Amount"]) + float(metrics["UsageQuantity"]["Amount"])
