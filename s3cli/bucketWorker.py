@@ -77,7 +77,7 @@ def getCost(client):
         },Granularity = 'MONTHLY', 
         Metrics = ["BlendedCost", "UnblendedCost", "UsageQuantity"])
     
-    print(res)
+    #print(res)
     buckets = dict()
     for x in res["ResultsByTime"][0]["Groups"]:
         metrics = x["Metrics"]
