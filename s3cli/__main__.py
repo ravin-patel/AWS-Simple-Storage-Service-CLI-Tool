@@ -1,10 +1,12 @@
 import sys
 import boto3
 import botocore
-import s3funcmodule
+import bucketWorker
 import argparse
+import Bucket
 import csv
 from argparse import RawTextHelpFormatter
+import constants
 
 
 def main():
@@ -30,54 +32,74 @@ def main():
                                 aws_access_key_id=accessKey,
                                 aws_secret_access_key=secretKey
                                 )
-    parser = argparse.ArgumentParser(description="""
-AWS S3 CLI Tool is used to get data of your s3 storage. Here are some of the available commands: \n
-
-   name -- returns the names of the buckets. 
-           Use the optional argument -f [filter string] to filter the bucket by name. \n 
-   size -- returns the total size of each bucket in bytes. 
-           Use the optional argument --kb --mb --gb to get the size in different units. \n
-    cd  -- returns the creation date of each bucket. \n
-    fc  -- returns the total number of files in each bucket.\n
-    lm  -- returns the name and time of the last modified object in each bucket. \n
-region  -- returns each bucket grouped by their respective region. \n
-storage -- returns storage type of each object in each bucket. 
-    """, formatter_class=RawTextHelpFormatter)
+    s3Cost = boto3.client('ce',
+                          aws_access_key_id=accessKey,
+                          aws_secret_access_key=secretKey
+                          )
+    parser = argparse.ArgumentParser(
+        description=constants.HELP_TEXT, formatter_class=RawTextHelpFormatter)
     parser.add_argument('cmd', type=str,
-                        help='pos arg')
+                        help=constants.HELP_CMD, nargs='*')
     parser.add_argument('--kb', action='store_true',
-                        help='when used with size the returned bucket size will be in kilobytes')
+                        help=constants.HELP_KB)
     parser.add_argument('--mb', action='store_true',
-                        help='when used with size the returned bucket size will be in megabytes')
+                        help=constants.HELP_MB)
     parser.add_argument('--gb', action='store_true',
-                        help='when used with size the returned bucket size will be in gigabytes')
+                        help=constants.HELP_GB)
     parser.add_argument(
-        '-f', type=str, help='use with name command to return all buckets filtered with the string proceeding -f')
-    arg = parser.parse_args()
+        '-f', type=str, help=constants.HELP_F)
 
-    if arg.cmd == 'name':
-        if arg.f is not None:
-            s3funcmodule.getFilteredBucketName(s3Resource, arg.f)
-        else:
-            s3funcmodule.getBucketName(response)
-    if arg.cmd == 'cd':
-        s3funcmodule.getBucketCreationDate(response)
-    if arg.cmd == 'fc':
-        s3funcmodule.getNumberOfObj(s3Client, response)
-    if arg.cmd == 'size' and arg.kb == False and arg.mb == False and arg.gb == False:
-        s3funcmodule.getTotalObjectSize(s3Resource, response)
-    if arg.cmd == 'size' and arg.kb == True and arg.mb == False and arg.gb == False:
-        s3funcmodule.getTotalObjectSize(s3Resource, response, 'kb')
-    if arg.cmd == 'size' and arg.kb == False and arg.mb == True and arg.gb == False:
-        s3funcmodule.getTotalObjectSize(s3Resource, response, 'mb')
-    if arg.cmd == 'size' and arg.kb == False and arg.mb == False and arg.gb == True:
-        s3funcmodule.getTotalObjectSize(s3Resource, response, 'gb')
-    if arg.cmd == 'lm':
-        s3funcmodule.getLastModified(s3Client, response)
-    if arg.cmd == 'region':
-        s3funcmodule.getRegion(s3Client, response)
-    if arg.cmd == 'storage':
-        s3funcmodule.getStorageTypeOfObj(s3Client, response)
+    arg = parser.parse_args()
+    param = GetParams(arg)
+    bucketWorker.ProcessBucket(response, s3Client, s3Resource, param)
+    # print(arg)
+    # if arg.cmd == 'name':
+    #     if arg.f is not None:
+    #         bucketWorker.getFilteredBucketName(s3Resource, arg.f)
+    #     else:
+    #         bucketWorker.getBucketName(response)
+    # if arg.cmd == 'cd':
+    #     bucketWorker.getBucketCreationDate(response)
+    # if arg.cmd == 'fc':
+    #     bucketWorker.getNumberOfObj(s3Client, response)
+    # if arg.cmd == 'size' and arg.kb == False and arg.mb == False and arg.gb == False:
+    #     bucketWorker.getTotalObjectSize(s3Resource, response)
+    # if arg.cmd == 'size' and arg.kb == True and arg.mb == False and arg.gb == False:
+    #     bucketWorker.getTotalObjectSize(s3Resource, response, 'kb')
+    # if arg.cmd == 'size' and arg.kb == False and arg.mb == True and arg.gb == False:
+    #     bucketWorker.getTotalObjectSize(s3Resource, response, 'mb')
+    # if arg.cmd == 'size' and arg.kb == False and arg.mb == False and arg.gb == True:
+    #     bucketWorker.getTotalObjectSize(s3Resource, response, 'gb')
+    # if arg.cmd == 'lm':
+    #     bucketWorker.getLastModified(s3Client, response)
+    # if arg.cmd == 'region':
+    #     bucketWorker.getRegion(s3Client, response)
+    # if arg.cmd == 'storage':
+    #     bucketWorker.getStorageTypeOfObj(s3Client, response)
+    # if arg.cmd == 'cost':
+    #     bucketWorker.getCost()
+
+
+# processing methods
+def GetParams(arg):
+    return {
+        'size': 'size' in arg.cmd,
+        'fileCount': 'fileCount' in arg.cmd,
+        'creationDate': 'creationDate' in arg.cmd,
+        'lastModified': 'lastModified' in arg.cmd,
+        'storage': 'storage' in arg.cmd,
+        'region': 'region' in arg.cmd,
+        'cost': 'cost' in arg.cmd,
+        'size_kb': arg.kb,
+        'size_mb': arg.mb,
+        'size_gb': arg.gb,
+        'f': arg.f
+    }
+
+
+def PrintResult(result):
+    # print by region, then top level bucket info, then object list
+    print("fucku")
 
 
 if __name__ == '__main__':

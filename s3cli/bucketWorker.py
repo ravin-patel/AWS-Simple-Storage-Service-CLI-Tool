@@ -14,6 +14,86 @@ def getBucketCreationDate(response):
 # iterates through all buckets returned in the response and prints the name of each bucket
 
 
+def getCost():
+
+    # use the bota3 lib to get the cost/usage
+    # res = client.get_cost_and_usage(TimePeriod={
+    #     'Start': '2019-11-01',
+    #     'End': '2019-11-27'
+    # })
+    test_res = {
+        "GroupDefinitions": [
+            {
+                "Key": "SERVICE",
+                "Type": "DIMENSION"
+            },
+            {
+                "Key": "Environment",
+                "Type": "TAG"
+            }
+        ],
+        "ResultsByTime": [
+            {
+                "Estimated": False,
+                "Groups": [
+                    {
+                        "Keys": [
+                            "AWS BUCKET 1",
+                            "Environment$Prod"
+                        ],
+                        "Metrics": {
+                            "BlendedCost": {
+                                "Amount": "39.1603300457",
+                                "Unit": "USD"
+                            },
+                            "UnblendedCost": {
+                                "Amount": "39.1603300457",
+                                "Unit": "USD"
+                            },
+                            "UsageQuantity": {
+                                "Amount": "173842.5440074444",
+                                "Unit": "N/A"
+                            }
+                        }
+                    },
+                    {
+                        "Keys": [
+                            "AWS BUCKET 2",
+                            "Environment$Test"
+                        ],
+                        "Metrics": {
+                            "BlendedCost": {
+                                "Amount": "0.1337464807",
+                                "Unit": "USD"
+                            },
+                            "UnblendedCost": {
+                                "Amount": "0.1337464807",
+                                "Unit": "USD"
+                            },
+                            "UsageQuantity": {
+                                "Amount": "15992.0786663399",
+                                "Unit": "N/A"
+                            }
+                        }
+                    }
+                ],
+                "TimePeriod": {
+                    "End": "2017-10-01",
+                    "Start": "2017-09-01"
+                },
+                "Total": {}
+            }
+        ]
+    }
+
+    buckets = dict()
+    for x in test_res["ResultsByTime"][0]["Groups"]:
+        metrics = x["Metrics"]
+        buckets[x["Keys"][0]] = float(metrics["BlendedCost"]["Amount"]) + float(
+            metrics["UnblendedCost"]["Amount"]) + float(metrics["UsageQuantity"]["Amount"])
+    print(buckets)
+
+
 def getBucketName(response):
     for bucket in response['Buckets']:
         print('Name of bucket: {}'.format(bucket['Name']))
@@ -112,3 +192,7 @@ def getRegion(s3, response):
         unsorted[bucket['Name']] = r['LocationConstraint']
     for key in sorted(unsorted):
         print('{} is located in: {}'.format(key, unsorted[key]))
+
+
+def ProcessBucket(response, s3Client, s3Resource, params):
+    return null
