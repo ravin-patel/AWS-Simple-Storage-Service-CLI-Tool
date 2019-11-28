@@ -27,7 +27,6 @@ def main():
                             aws_access_key_id=accessKey,
                             aws_secret_access_key=secretKey
                             )
-    response = s3Client.list_buckets()
     s3Resource = boto3.resource('s3',
                                 aws_access_key_id=accessKey,
                                 aws_secret_access_key=secretKey
@@ -36,7 +35,10 @@ def main():
                           aws_access_key_id=accessKey,
                           aws_secret_access_key=secretKey
                           )
+    # response of s3client to get list of buckets and its metadata
+    response = s3Client.list_buckets()
 
+    # argument parser
     parser = argparse.ArgumentParser(
         description=constants.HELP_TEXT, formatter_class=RawTextHelpFormatter)
     parser.add_argument('cmd', type=str,
@@ -52,44 +54,21 @@ def main():
 
     arg = parser.parse_args()
     param = GetParams(arg)
-    BucketWorker.ProcessBucket(response, s3Client, s3Resource, param)
-    # print(arg)
-    # if arg.cmd == 'name':
-    #     if arg.f is not None:
-    #         bucketWorker.getFilteredBucketName(s3Resource, arg.f)
-    #     else:
-    #         bucketWorker.getBucketName(response)
-    # if arg.cmd == 'cd':
-    #     bucketWorker.getBucketCreationDate(response)
-    # if arg.cmd == 'fc':
-    #     bucketWorker.getNumberOfObj(s3Client, response)
-    # if arg.cmd == 'size' and arg.kb == False and arg.mb == False and arg.gb == False:
-    #     bucketWorker.getTotalObjectSize(s3Resource, response)
-    # if arg.cmd == 'size' and arg.kb == True and arg.mb == False and arg.gb == False:
-    #     bucketWorker.getTotalObjectSize(s3Resource, response, 'kb')
-    # if arg.cmd == 'size' and arg.kb == False and arg.mb == True and arg.gb == False:
-    #     bucketWorker.getTotalObjectSize(s3Resource, response, 'mb')
-    # if arg.cmd == 'size' and arg.kb == False and arg.mb == False and arg.gb == True:
-    #     bucketWorker.getTotalObjectSize(s3Resource, response, 'gb')
-    # if arg.cmd == 'lm':
-    #     bucketWorker.getLastModified(s3Client, response)
-    # if arg.cmd == 'region':
-    #     bucketWorker.getRegion(s3Client, response)
-    # if arg.cmd == 'storage':
-    #     bucketWorker.getStorageTypeOfObj(s3Client, response)
-    # if arg.cmd == 'cost':
-    #     bucketWorker.getCost()
+    result = BucketWorker.ProcessBucket(response, s3Client, s3Resource, param)
+    PrintResult(result, arg)
+
+# checks which cmd are called in the argument and sets it accordingly if it exists
 
 
-# processing methods
 def GetParams(arg):
     return {
-        'size': 'size' in arg.cmd,
-        'fileCount': 'fileCount' in arg.cmd,
+        'objectParams': {
+            'size': 'size' in arg.cmd,
+            'fileCount': 'fileCount' in arg.cmd,
+            'storage': 'storage' in arg.cmd,
+            'lastModified': 'lastModified' in arg.cmd
+        },
         'creationDate': 'creationDate' in arg.cmd,
-        'lastModified': 'lastModified' in arg.cmd,
-        'storage': 'storage' in arg.cmd,
-        'region': 'region' in arg.cmd,
         'cost': 'cost' in arg.cmd,
         'size_kb': arg.kb,
         'size_mb': arg.mb,
@@ -97,10 +76,35 @@ def GetParams(arg):
         'f': arg.f
     }
 
+# uses response results to print out the data requested from the command line arguments
 
-def PrintResult(result):
-    # print by region, then top level bucket info, then object list
-    print("fucku")
+
+def PrintResult(result, arg):
+    for region in result.keys():
+        print("===============================================================" +
+              region.upper()+"===============================================================")
+        for bucket in result[region]:
+            print(bucket.name)
+            if 'size' in arg.cmd and arg.kb == False and arg.mb == False and arg.gb == False:
+                print('|__ Size: {} bytes'.format(bucket.size_bytes))
+            if 'size' in arg.cmd and arg.kb == True:
+                print('|__ Size: {} kb'.format(bucket.size_kb()))
+            if 'size' in arg.cmd and arg.mb == True:
+                print('|__ Size: {} mb'.format(bucket.size_mb()))
+            if 'size' in arg.cmd and arg.gb == True:
+                print('|__ Size: {} gb'.format(bucket.size_gb()))
+            if 'fileCount' in arg.cmd:
+                print('|__ File Count: {}'.format(bucket.fileCount))
+            if 'creationDate' in arg.cmd:
+                print('|__ Creation Date: {}'.format(bucket.creationDate))
+            if 'lastModified' in arg.cmd:
+                print('|__ Last Modified: {} -- Modified at: {}'.format(
+                    bucket.lastModifiedFile, bucket.lastModifiedDate))
+            if 'storage' in arg.cmd:
+                for k, v in bucket.storage.items():
+                    print('|__ File: {}: {}'.format(k, v))
+
+        # print(b.cost)
 
 
 if __name__ == '__main__':

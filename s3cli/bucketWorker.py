@@ -1,18 +1,67 @@
 import boto3
 import sys
 import botocore
-import Bucket
+from Bucket import Bucket
 from datetime import datetime, timedelta
 
-# iterates through all buckets returned in the response and prints the creation date of each bucket
+
+def IsBucketNameValid(name, prefix):
+    return name.startswith(prefix)
 
 
-def getBucketCreationDate(response):
+def ProcessBucket(response, s3Client, s3Resource, params):
+    result = {}
     for bucket in response['Buckets']:
-        print('Creation date of {} : {}'.format(
-            bucket['Name'], bucket['CreationDate'].ctime()))
+        # checks if the filter flag exists  and if the filter flag is a valid name
+        if (params['f'] and IsBucketNameValid(bucket['Name'], params['f'])) or (params['f'] is None):
+            currentBucket = Bucket()  # instantiate new Bucket
+            currentBucket.name = bucket['Name']  # set name attribute
+            currentBucket.region = s3Client.get_bucket_location(
+                Bucket=currentBucket.name)['LocationConstraint']  # set region attribute
+            # set creation date attribute
+            currentBucket.creationDate = bucket['CreationDate'].ctime()
+            # checks if there are ANY object level data requested in the argument
+            if (any(param == True for param in params['objectParams'].values())):
+                ProcessBucketObjects(
+                    currentBucket, bucket, params['objectParams'], s3Client, s3Resource)
 
-# iterates through all buckets returned in the response and prints the name of each bucket
+            # insert bucket, all relevant data should be populated
+            # check to see whether the region is already in result if so group them together, otherwise instantiate a list within a dict like:
+            # result = {Key=RegionName, Val = [This is a list of buckets, append current one]}
+            if currentBucket.region in result.keys():
+                result[currentBucket.region].append(currentBucket)
+            else:
+                result[currentBucket.region] = [currentBucket]
+
+    return result
+
+
+def ProcessBucketObjects(bucketObj, bucket, params, s3Client, s3Resource):
+    # Object level parameter processing
+    format = '%Y-%m-%d %H:%M:%S+00:00'  # datetime formating
+    totalSize = 0
+    fileCount = 0
+    lastModifiedDate = datetime(1900, 1, 1, 0)
+    lastModifiedObj = ""
+    # using paginator incase their are over 1000 objects in the bucket
+    paginator = s3Client.get_paginator("list_objects")
+    page_iterator = paginator.paginate(Bucket=bucket['Name'])
+    for page in page_iterator:
+        if 'Contents' in page:
+            for obj in page['Contents']:  # iterate through the objects
+                fileCount += 1
+                dt = obj['LastModified']
+                bucketObj.storage[obj['Key']] = [obj['StorageClass']]
+                totalSize += obj['Size']
+                # checks if the current objects last modified date is greater than lastModifiedDate
+                if(datetime.strptime(str(dt), format) > lastModifiedDate):
+                    lastModifiedDate = datetime.strptime(str(dt), format)
+                    lastModifiedObj = obj['Key']
+            # sets the bucket class attributes based on the returned values
+            bucketObj.fileCount = fileCount
+            bucketObj.size_bytes = totalSize
+            bucketObj.lastModifiedDate = lastModifiedDate
+            bucketObj.lastModifiedFile = lastModifiedObj
 
 
 def getCost():
@@ -93,119 +142,3 @@ def getCost():
         buckets[x["Keys"][0]] = float(metrics["BlendedCost"]["Amount"]) + float(
             metrics["UnblendedCost"]["Amount"]) + float(metrics["UsageQuantity"]["Amount"])
     print(buckets)
-
-
-def getBucketName(response):
-    for bucket in response['Buckets']:
-        print('Name of bucket: {}'.format(bucket['Name']))
-
-# iterates through passed in bucket and returns the name of each key(object) in that bucket
-
-
-def listBucketObj(s3, bucket):
-    paginator = s3.get_paginator("list_objects")
-    for bucket in response['Buckets']:
-        page_iterator = paginator.paginate(Bucket=bucket['Name'])
-        for page in page_iterator:
-            if "Contents" in page:
-                for key in page["Contents"]:
-                    print(
-                        'Name of bucket: {} -- Name of Key: {}'.format(bucket['Name'], key["Key"]))
-
-
-def getStorageTypeOfObj(s3, response):
-    paginator = s3.get_paginator("list_objects")
-    for bucket in response['Buckets']:
-        page_iterator = paginator.paginate(Bucket=bucket['Name'])
-        for page in page_iterator:
-            # print(page['Contents'])
-            if 'Contents' in page:
-                for key in page['Contents']:
-                    print(
-                        'Name of Key: {} -- StorageClass: {}'.format(key['Key'], key['StorageClass']))
-            else:
-                print("cant get")
-
-
-def getLastModified(s3, response):
-    paginator = s3.get_paginator("list_objects")
-    for bucket in response['Buckets']:
-        bucketName = bucket['Name']
-        page_iterator = paginator.paginate(Bucket=bucketName)
-        format = '%Y-%m-%d %H:%M:%S+00:00'
-        lastModifiedDate = datetime(1900, 1, 1, 0)
-        lastModifiedObj = ""
-        for page in page_iterator:
-            if "Contents" in page:
-                for key in page["Contents"]:
-                    dt = key['LastModified']
-                    if(datetime.strptime(str(dt), format) > lastModifiedDate):
-                        lastModifiedDate = datetime.strptime(str(dt), format)
-                        lastModifiedObj = key['Key']
-        print(bucketName)
-        print('Last modified file: {} -- modified on: {} \n'.format(lastModifiedObj, lastModifiedDate))
-
-# iterates through all buckets returned in the response and prints the number of keys/objects in each bucket
-
-
-def getNumberOfObj(s3, response):
-    paginator = s3.get_paginator("list_objects")
-    for bucket in response['Buckets']:
-        count = 0
-        page_iterator = paginator.paginate(Bucket=bucket['Name'])
-        for page in page_iterator:
-            if "Contents" in page:
-                for key in page["Contents"]:
-                    count += 1
-        print('Number of files in {}: {}'.format(bucket['Name'], count))
-
-# iterates through all buckets and returns the total size in either bytes/kb/mb
-
-
-def getTotalObjectSize(s3, response, unit='bytes'):
-    for bucket in response['Buckets']:
-        totalSize = sum(
-            [object.size for object in s3.Bucket(bucket['Name']).objects.all()])
-        if str(unit) == 'kb':
-            print('Total size of {}: {} kb'.format(
-                bucket['Name'], totalSize/1000))
-        elif unit == 'mb':
-            print('Total size of {}: {} mb'.format(
-                bucket['Name'], totalSize/1000000))
-        elif unit == 'gb':
-            print('Total size of {}: {} GB'.format(
-                bucket['Name'], totalSize/1000000000))
-        else:
-            print('Total size of {}: {} bytes'.format(
-                bucket['Name'], totalSize))
-
-
-def getFilteredBucketName(s3, prefix):
-    for bucket in s3.buckets.all():
-        if bucket.name.startswith(prefix):
-            print(bucket.name)
-
-
-def getRegion(s3, response):
-    unsorted = {}
-    for bucket in response['Buckets']:
-        r = s3.get_bucket_location(Bucket=bucket['Name'])
-        unsorted[bucket['Name']] = r['LocationConstraint']
-    for key in sorted(unsorted):
-        print('{} is located in: {}'.format(key, unsorted[key]))
-
-
-def ProcessBucket(response, s3Client, s3Resource, params):
-    # TODO deprecate region
-    # use above methods to do everything - refactor to act on one bucket at a time
-    # process top level shit here aka instantiate new bucket and populate the fields out :
-        # check filter here if provided
-            # populate creationDate if param is true
-        # now do object level processing -- should all be in one pass if possible:
-            # size, lastmodified, number of obj, storage type, add to list of bucket objects, all in one shot(obviously check validity of params)
-
-    # now insert bucket, all relevant data should be populated
-    # when you insert a bucket, check to see whether the region is in result, otherwise instantiate a list within a dict like:
-        # result = {Key=RegionName, Val = [This is a list of buckets, just append your current one]}
-    result = {}
-    return result

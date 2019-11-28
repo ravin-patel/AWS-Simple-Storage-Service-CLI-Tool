@@ -1,13 +1,15 @@
-class Bucket:
-    name = ''
-    size_bytes = 0
-    fileCount = 0
-    creationDate = ''
-    lastModified = ''
-    storage = {'Key': '', 'StorageClass': ''}
-    region = ''
-    cost = ''
-    f = ''
+class Bucket(object):
+
+    def __init__(self):
+        self.name = ''
+        self.size_bytes = 0
+        self.fileCount = 0
+        self.creationDate = ''
+        self.lastModifiedDate = ''
+        self.lastModifiedFile = ''
+        self.storage = {}
+        self.region = ''
+        self.cost = ''
 
     def size_kb(self):
         return self.size_bytes/1000
