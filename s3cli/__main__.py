@@ -1,7 +1,7 @@
 import sys
 import boto3
 import botocore
-import bucketWorker
+import BucketWorker
 import argparse
 import Bucket
 import csv
@@ -36,6 +36,7 @@ def main():
                           aws_access_key_id=accessKey,
                           aws_secret_access_key=secretKey
                           )
+
     parser = argparse.ArgumentParser(
         description=constants.HELP_TEXT, formatter_class=RawTextHelpFormatter)
     parser.add_argument('cmd', type=str,
@@ -51,7 +52,7 @@ def main():
 
     arg = parser.parse_args()
     param = GetParams(arg)
-    bucketWorker.ProcessBucket(response, s3Client, s3Resource, param)
+    BucketWorker.ProcessBucket(response, s3Client, s3Resource, param)
     # print(arg)
     # if arg.cmd == 'name':
     #     if arg.f is not None:

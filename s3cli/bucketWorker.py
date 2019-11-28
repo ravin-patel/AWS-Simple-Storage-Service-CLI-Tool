@@ -1,6 +1,7 @@
 import boto3
 import sys
 import botocore
+import Bucket
 from datetime import datetime, timedelta
 
 # iterates through all buckets returned in the response and prints the creation date of each bucket
@@ -195,4 +196,16 @@ def getRegion(s3, response):
 
 
 def ProcessBucket(response, s3Client, s3Resource, params):
-    return null
+    # TODO deprecate region
+    # use above methods to do everything - refactor to act on one bucket at a time
+    # process top level shit here aka instantiate new bucket and populate the fields out :
+        # check filter here if provided
+            # populate creationDate if param is true
+        # now do object level processing -- should all be in one pass if possible:
+            # size, lastmodified, number of obj, storage type, add to list of bucket objects, all in one shot(obviously check validity of params)
+
+    # now insert bucket, all relevant data should be populated
+    # when you insert a bucket, check to see whether the region is in result, otherwise instantiate a list within a dict like:
+        # result = {Key=RegionName, Val = [This is a list of buckets, just append your current one]}
+    result = {}
+    return result
