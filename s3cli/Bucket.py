@@ -10,10 +10,10 @@ class Bucket:
     f = ''
 
     def size_kb(self):
-        return size_bytes/1000
+        return self.size_bytes/1000
 
     def size_mb(self):
-        return size_byte/1000000
+        return self.size_bytes/1000000
 
     def size_gb(self):
-        return size_byte/1000000000
+        return self.size_bytes/1000000000
